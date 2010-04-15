@@ -1,0 +1,28 @@
+{
+   "abstract" : "convert Pod::PseudoPod documents into LaTeX",
+   "author" : [
+      "chromatic <chromatic@cpan.org>"
+   ],
+   "build_requires" : {
+      "File::Spec::Functions" : "0",
+      "IO::String" : "0",
+      "Module::Build" : "0.3601",
+      "Test::More" : "0.60"
+   },
+   "configure_requires" : {
+      "Module::Build" : "0.3601"
+   },
+   "generated_by" : "Dist::Zilla version 2.101040",
+   "license" : "perl",
+   "meta-spec" : {
+      "url" : "http://module-build.sourceforge.net/META-spec-v1.4.html",
+      "version" : 1.4
+   },
+   "name" : "Pod-PseudoPod-LaTeX",
+   "recommends" : {},
+   "requires" : {
+      "Pod::PseudoPod" : "0.16",
+      "perl" : "5.008006"
+   },
+   "version" : "1.101050"
+}

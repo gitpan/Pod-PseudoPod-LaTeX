@@ -1,11 +1,15 @@
 package Pod::PseudoPod::LaTeX;
+BEGIN {
+  $Pod::PseudoPod::LaTeX::VERSION = '1.101050';
+}
+
+use Pod::PseudoPod 0.16;
 
 use base 'Pod::PseudoPod';
+use 5.008006;
 
 use strict;
 use warnings;
-
-our $VERSION = '1.000';
 
 sub new
 {
@@ -45,14 +49,14 @@ sub encode_text
 {
     my ( $self, $text ) = @_;
 
-    return $text if $self->{flags}{in_verbatim};
+    return $self->encode_verbatim_text($text) if $self->{flags}{in_verbatim};
     return $text if $self->{flags}{in_xref};
     return $text if $self->{flags}{in_figure};
 
     # Escape LaTeX-specific characters
     $text =~ s/\\/\\backslash/g;       # backslashes are special
-    $text =~ s/(\^)/\\char94\{\}/g;    # carets are special
     $text =~ s/([#\$&%_{}])/\\$1/g;
+    $text =~ s/(\^)/\\char94{}/g;         # carets are special
 
     $text =~ s/(\\backslash)/\$$1\$/g;    # add unescaped dollars
 
@@ -76,6 +80,17 @@ sub encode_text
 
     # suggest hyphenation points for module names
     $text =~ s/::/::\\-/g;
+
+    return $text;
+}
+
+# in verbatim mode, some things still need escaping - otherwise markup
+# wouldn't work when the codes_in_verbatim option is enabled.
+sub encode_verbatim_text {
+    my ($self, $text) = @_;
+
+    $text =~ s/([{}])/\\$1/g;
+    $text =~ s/\\(?![{}])/\\textbackslash{}/g;
 
     return $text;
 }
@@ -277,14 +292,14 @@ sub start_Verbatim
     #	$self->{scratch} .= "\\addtolength{\\parskip}{-5pt}\n";
     $self->{scratch} .= "\\vspace{-6pt}\n"
                      .  "\\scriptsize\n"
-                     .  "\\begin{verbatim}\n";
+                     .  "\\begin{Verbatim}[commandchars=\\\\\\{\\}]\n";
     $self->{flags}{in_verbatim}++;
 }
 
 sub end_Verbatim
 {
     my $self = shift;
-    $self->{scratch} .= "\\end{verbatim}\n"
+    $self->{scratch} .= "\n\\end{Verbatim}\n"
                      .  "\\vspace{-6pt}\n";
 
     #	$self->{scratch} .= "\\addtolength{\\parskip}{5pt}\n";
@@ -550,7 +565,7 @@ Pod::PseudoPod::LaTeX - convert Pod::PseudoPod documents into LaTeX
 
 =head1 VERSION
 
-Version 0.10
+version 1.101050
 
 =head1 SYNOPSIS
 
@@ -569,6 +584,20 @@ Perhaps a little code snippet.
     ...
 
 There aren't really any user-servicable parts inside.
+
+=head1 LATEX PRELUDE
+
+The generated LaTeX code needs some packages to be loaded to work correctly.
+Currently it needs
+
+    \usepackage{fancyvrb}
+
+The standard font in LaTeX (Computer Modern) does not support bold and italic
+variants of its monospace font, an alternative is
+
+    \usepackage[T1]{fontenc}
+    \usepackage{textcomp}
+    \usepackage[scaled]{beramono}
 
 =head1 AUTHOR
 
@@ -622,7 +651,7 @@ work under free software guidelines.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2006, 2009 chromatic, some rights reserved.
+Copyright (c) 2006, 2009, 2010 chromatic, some rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl 5.8 itself.

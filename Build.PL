@@ -1,34 +1,36 @@
-#! perl
-
-BEGIN { require 5.006002 }
 
 use strict;
 use warnings;
 
-use Module::Build;
-use File::Spec::Functions;
+use Module::Build 0.3601;
 
-my $builder = Module::Build->new(
-    module_name          => 'Pod::PseudoPod::LaTeX',
-    license              => 'perl',
-    dist_author          => 'chromatic <chromatic@wgz.org>',
-    dist_version_from    => 'lib/Pod/PseudoPod/LaTeX.pm',
-    requires             =>
-    {
-        'Pod::PseudoPod' => '0.15',
-        'perl'           => '5.6.2',
-    },
-    build_requires =>
-    {
-        'Test::More'     => '0.60',
-        'IO::String'     => 0,
-    },
-    config_requires =>
-    {
-        'Module::Build'  => '0.33',
-    },
-    add_to_cleanup       => [ 'Pod-PseudoPod-LaTeX-*' ],
-    script_files         => [ catfile(qw( scripts ppod2latex )) ],
-);
+my %module_build_args = (
+                       'dist_abstract' => 'convert Pod::PseudoPod documents into LaTeX',
+                       'script_files' => [],
+                       'license' => 'perl',
+                       'build_requires' => {
+                                             'Test::More' => '0.60',
+                                             'IO::String' => '0',
+                                             'File::Spec::Functions' => '0',
+                                             'Module::Build' => '0.3601'
+                                           },
+                       'dist_name' => 'Pod-PseudoPod-LaTeX',
+                       'dist_author' => [
+                                          'chromatic <chromatic@cpan.org>'
+                                        ],
+                       'module_name' => 'Pod::PseudoPod::LaTeX',
+                       'requires' => {
+                                       'perl' => '5.008006',
+                                       'Pod::PseudoPod' => '0.16'
+                                     },
+                       'recommends' => {},
+                       'configure_requires' => {
+                                                 'Module::Build' => '0.3601'
+                                               },
+                       'dist_version' => '1.101050'
+                     );
 
-$builder->create_build_script();
+
+my $build = Module::Build->new(%module_build_args);
+
+$build->create_build_script;

@@ -1,13 +1,15 @@
-Build.PL
 Changes
+LICENSE
 MANIFEST
-META.yml # Will be created by "make dist"
+META.json
+META.yml
 README
+dist.ini
 lib/Pod/PseudoPod/LaTeX.pm
 scripts/ppod2latex
 t/00-load.t
 t/boilerplate.t
-t/test_file.pod
 t/escapes.t
 t/sections.t
+t/test_file.pod
 t/translations.t
