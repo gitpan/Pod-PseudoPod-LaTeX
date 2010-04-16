@@ -24,5 +24,8 @@
       "Pod::PseudoPod" : "0.16",
       "perl" : "5.008006"
    },
-   "version" : "1.101050"
+   "resources" : {
+      "repository" : "http://github.com/chromatic/Pod-PseudoPod-LaTeX"
+   },
+   "version" : "1.101060"
 }
