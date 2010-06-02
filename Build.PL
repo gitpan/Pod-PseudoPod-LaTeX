@@ -27,7 +27,7 @@ my %module_build_args = (
                        'configure_requires' => {
                                                  'Module::Build' => '0.3601'
                                                },
-                       'dist_version' => '1.101060'
+                       'dist_version' => '1.101530'
                      );
 
 
