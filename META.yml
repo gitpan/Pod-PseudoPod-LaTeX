@@ -3,7 +3,6 @@ abstract: 'convert Pod::PseudoPod documents into LaTeX'
 author:
   - 'chromatic <chromatic@cpan.org>'
 build_requires:
-  File::Spec::Functions: 0
   IO::String: 0
   Module::Build: 0.3601
   Test::More: 0.60
@@ -17,8 +16,10 @@ meta-spec:
 name: Pod-PseudoPod-LaTeX
 recommends: {}
 requires:
+  File::Basename: 0
+  File::Spec::Functions: 0
   Pod::PseudoPod: 0.16
   perl: 5.008006
 resources:
   repository: http://github.com/chromatic/Pod-PseudoPod-LaTeX
-version: 1.101530
+version: 1.101600

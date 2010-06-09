@@ -1,6 +1,6 @@
 package Pod::PseudoPod::LaTeX;
 BEGIN {
-  $Pod::PseudoPod::LaTeX::VERSION = '1.101530';
+  $Pod::PseudoPod::LaTeX::VERSION = '1.101600';
 }
 
 use Pod::PseudoPod 0.16;
@@ -587,7 +587,7 @@ Pod::PseudoPod::LaTeX - convert Pod::PseudoPod documents into LaTeX
 
 =head1 VERSION
 
-version 1.101530
+version 1.101600
 
 =head1 SYNOPSIS
 

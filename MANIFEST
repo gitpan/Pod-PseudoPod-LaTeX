@@ -4,9 +4,9 @@ MANIFEST
 META.json
 META.yml
 README
+bin/ppod2latex
 dist.ini
 lib/Pod/PseudoPod/LaTeX.pm
-scripts/ppod2latex
 t/00-load.t
 t/boilerplate.t
 t/escapes.t
