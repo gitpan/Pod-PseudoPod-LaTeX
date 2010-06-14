@@ -1,6 +1,6 @@
 package Pod::PseudoPod::LaTeX;
 BEGIN {
-  $Pod::PseudoPod::LaTeX::VERSION = '1.101600';
+  $Pod::PseudoPod::LaTeX::VERSION = '1.101650';
 }
 
 use Pod::PseudoPod 0.16;
@@ -17,14 +17,24 @@ sub new
     my $self             = $class->SUPER::new(%args);
 
     $self->accept_targets_as_text(
-        qw( sidebar blockquote programlisting screen figure table PASM PIR PIR_FRAGMENT PASM_FRAGMENT PIR_FRAGMENT_INVALID)
+        qw( sidebar blockquote programlisting screen figure table
+            PASM PIR PIR_FRAGMENT PASM_FRAGMENT PIR_FRAGMENT_INVALID )
     );
 
     $self->{scratch} ||= '';
     $self->{stack}     = [];
-    $self->{labels}     = { screen => 'Program output'};
+    $self->{labels}    = { screen => 'Program output' };
 
     return $self;
+}
+
+sub emit_environments
+{
+    my ( $self, %env ) = @_;
+    for ( keys %env )
+    {
+        $self->{emit_environment}->{$_} = $env{$_};
+    }
 }
 
 sub end_Document
@@ -55,7 +65,7 @@ sub encode_text
     return $text if $self->{flags}{in_figure};
 
     # Escape LaTeX-specific characters
-    $text =~ s/\\/\\backslash/g;       # backslashes are special
+    $text =~ s/\\/\\backslash/g;          # backslashes are special
     $text =~ s/([#\$&%_{}])/\\$1/g;
     $text =~ s/(\^)/\\char94{}/g;         # carets are special
     $text =~ s/</\\textless{}/g;
@@ -166,6 +176,7 @@ sub end_E
     # XXX - error checking here
     my $entity = delete $self->{scratch};
     $entity =~ /(\w)(\w+)/;
+
     if ( exists $characters{$2} )
     {
         $clean_entity = $characters{$2}->($1);
@@ -178,7 +189,7 @@ sub end_E
         die "Unrecognized character '$entity'\n";
     }
 
-    $self->{scratch} = pop @{ $self->{stack} };
+    $self->{scratch}  = pop @{ $self->{stack} };
     $self->{scratch} .= $clean_entity;
 }
 
@@ -312,12 +323,11 @@ sub end_Verbatim
     $self->{scratch} .= "\n\\end{Verbatim}\n"
                      .  "\\vspace{-6pt}\n";
 
-    #	$self->{scratch} .= "\\addtolength{\\parskip}{5pt}\n";
+    #    $self->{scratch} .= "\\addtolength{\\parskip}{5pt}\n";
     $self->{scratch} .= "\\normalsize\n";
     $self->{flags}{in_verbatim}--;
     $self->emit();
 }
-
 
 sub end_screen
 {
@@ -325,11 +335,12 @@ sub end_screen
     $self->{scratch} .= "\n\\end{Verbatim}\n"
                      .  "\\vspace{-6pt}\n";
 
-    #	$self->{scratch} .= "\\addtolength{\\parskip}{5pt}\n";
+    #    $self->{scratch} .= "\\addtolength{\\parskip}{5pt}\n";
     $self->{scratch} .= "\\normalsize\n";
     $self->{flags}{in_verbatim}--;
     $self->emit();
 }
+
 sub start_figure
 {
     my ( $self, $flags ) = @_;
@@ -468,8 +479,8 @@ BEGIN
                              .  "\\setlength{\\topsep}{0pt}\n"
                              .  "\\setlength{\\itemsep}{0pt}\n";
 
-            #			$self->{scratch} .= "\\setlength{\\parskip}{0pt}\n";
-            #			$self->{scratch} .= "\\setlength{\\parsep}{0pt}\n";
+            #            $self->{scratch} .= "\\setlength{\\parskip}{0pt}\n";
+            #            $self->{scratch} .= "\\setlength{\\parsep}{0pt}\n";
         };
 
         my $end_sub = sub {
@@ -495,7 +506,7 @@ sub start_item_number
 {
     my ( $self, $flags ) = @_;
 
-    #	$self->{scratch}  .= "\\item[$flags->{number}] ";
+    #    $self->{scratch}  .= "\\item[$flags->{number}] ";
     $self->{scratch} .= "\\item ";    # LaTeX will auto-number
 }
 
@@ -508,30 +519,49 @@ sub start_item_text
 sub start_sidebar
 {
     my ( $self, $flags ) = @_;
-    $self->{scratch} .= "\\begin{figure}[!h]\n"
-                     .  "\\begin{center}\n"
-                     .  "\\framebox{\n"
-                     .  "\\begin{minipage}{3.5in}\n"
-                     .  "\\vspace{3pt}\n\n";
+    my $title;
+    $title = $self->encode_text( $flags->{title} ) if $flags->{title};
 
-    if ( $flags->{title} )
+    if ( $self->{emit_environment}->{sidebar} )
     {
-        my $title = $self->encode_text( $flags->{title} );
-        $self->{scratch} .= "\\begin{center}\n"
-                         .  "\\large{\\bfseries{" . $title . "}}\n"
-                         .  "\\end{center}\n\n";
+    $self->{scratch} .= "\\begin{" . $self->{emit_environment}->{sidebar} . "}";
+    $self->{scratch} .= "[$title]" if $title;
+    $self->{scratch} .= "\n";
+    }
+    else
+    {
+        $self->{scratch} .= "\\begin{figure}[!h]\n"
+                         .  "\\begin{center}\n"
+                         .  "\\framebox{\n"
+                         .  "\\begin{minipage}{3.5in}\n"
+                         .  "\\vspace{3pt}\n\n";
+
+        if ( $title )
+        {
+            $self->{scratch} .= "\\begin{center}\n"
+                             .  "\\large{\\bfseries{" . $title . "}}\n"
+                             .  "\\end{center}\n\n";
+        }
     }
 }
 
 sub end_sidebar
 {
     my $self = shift;
-    $self->{scratch} .= "\\vspace{3pt}\n"
-                     .  "\\end{minipage}\n"
-                     # end framebox
-                     .  "}\n"
-                     .  "\\end{center}\n"
-                     .  "\\end{figure}\n";
+    if ( $self->{emit_environment}->{sidebar} )
+    {
+        $self->{scratch} .= "\\end{"
+                         .  $self->{emit_environment}->{sidebar} . "}\n\n";
+    }
+    else
+    {
+        $self->{scratch} .= "\\vspace{3pt}\n"
+                         .  "\\end{minipage}\n"
+                         # end framebox
+                         .  "}\n"
+                         .  "\\end{center}\n"
+                         .  "\\end{figure}\n";
+    }
 }
 
 BEGIN
@@ -587,7 +617,7 @@ Pod::PseudoPod::LaTeX - convert Pod::PseudoPod documents into LaTeX
 
 =head1 VERSION
 
-version 1.101600
+version 1.101650
 
 =head1 SYNOPSIS
 
@@ -600,12 +630,11 @@ Perhaps a little code snippet.
     use Pod::PseudoPod::LaTeX;
 
     my $parser = Pod::PseudoPod::LaTeX->new();
-	$parser->output_fh( $some_fh );
-	$parser->parse_file( 'some_document.pod' );
+        $parser->emit_environments( sidebar => 'sidebar' );
+    $parser->output_fh( $some_fh );
+    $parser->parse_file( 'some_document.pod' );
 
     ...
-
-There aren't really any user-servicable parts inside.
 
 =head1 LATEX PRELUDE
 
@@ -620,6 +649,14 @@ variants of its monospace font, an alternative is
     \usepackage[T1]{fontenc}
     \usepackage{textcomp}
     \usepackage[scaled]{beramono}
+
+=head1 STYLES / EMITTING ENVIRONMENTS
+
+The C<emit_environments> method accepts a hashref whose keys are POD environments
+and values are latex environments. Use this method if you would like
+C<Pod::PseudoPod::LaTeX> to emit a simple C<\begin{foo}...\end{foo}> environment
+rather than emit specific formatting codes. You must define any environemtns you
+use in this way in your latex prelude.
 
 =head1 AUTHOR
 

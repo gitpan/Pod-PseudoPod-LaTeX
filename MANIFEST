@@ -9,6 +9,7 @@ dist.ini
 lib/Pod/PseudoPod/LaTeX.pm
 t/00-load.t
 t/boilerplate.t
+t/emit_environments.t
 t/escapes.t
 t/sections.t
 t/test_file.pod

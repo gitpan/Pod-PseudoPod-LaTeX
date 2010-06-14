@@ -1,6 +1,12 @@
 Revision history for Pod-PseudoPod-LaTeX
 
+1.101650  Sun Jun 13 17:05:13 2010
+    - added support for custom environments
+    - improved screen handling (Dean Serenevy, Moritz Lenz)
+
 1.101600  Wed Jun 9 13:48:24 2010
+    - made bin/ppod2latex installable (Jerome Quelin, RT #58269)
+    - used Git plugins for dzil
 
 1.101530  Wed Jun 2 11:39:29 2010
     - pulled screen section changes from Moritz Lenz

@@ -22,4 +22,4 @@ requires:
   perl: 5.008006
 resources:
   repository: http://github.com/chromatic/Pod-PseudoPod-LaTeX
-version: 1.101600
+version: 1.101650
