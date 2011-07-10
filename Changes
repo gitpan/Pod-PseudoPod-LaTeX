@@ -1,8 +1,15 @@
 Revision history for Pod-PseudoPod-LaTeX
 
-1.101650  Sun Jun 13 17:05:13 2010
+1.20110710 2011-07-10 15:20:50 America/Los_Angeles
     - added support for custom environments
     - improved screen handling (Dean Serenevy, Moritz Lenz)
+    - support =for latex (Alberto Simões)
+    - render L<> and U<> as \url (Alberto Simões)
+    - make ligatures removal optional (Alberto Simões)
+    - support optional titles for 'screen' (Alberto Simões)
+    - support run-time defined environments with optional titles 
+      (Alberto Simões)
+    - support superscript G<> and subscript L<>. (Alberto Simões)
 
 1.101600  Wed Jun 9 13:48:24 2010
     - made bin/ppod2latex installable (Jerome Quelin, RT #58269)

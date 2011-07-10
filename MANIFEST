@@ -1,8 +1,8 @@
 Changes
 LICENSE
 MANIFEST
-META.json
 META.yml
+Makefile.PL
 README
 bin/ppod2latex
 dist.ini
@@ -10,6 +10,7 @@ lib/Pod/PseudoPod/LaTeX.pm
 t/00-load.t
 t/boilerplate.t
 t/emit_environments.t
+t/environments.t
 t/escapes.t
 t/sections.t
 t/test_file.pod

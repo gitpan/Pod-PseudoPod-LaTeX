@@ -1,6 +1,6 @@
 package Pod::PseudoPod::LaTeX;
 BEGIN {
-  $Pod::PseudoPod::LaTeX::VERSION = '1.101650';
+  $Pod::PseudoPod::LaTeX::VERSION = '1.20110710';
 }
 
 use Pod::PseudoPod 0.16;
@@ -11,15 +11,23 @@ use 5.008006;
 use strict;
 use warnings;
 
+
+
 sub new
 {
     my ( $class, %args ) = @_;
     my $self             = $class->SUPER::new(%args);
 
+    $self->{keep_ligatures} = exists($args{keep_ligatures}) ? $args{keep_ligatures} : 0;
+
+    # These have their contents parsed
     $self->accept_targets_as_text(
         qw( sidebar blockquote programlisting screen figure table
             PASM PIR PIR_FRAGMENT PASM_FRAGMENT PIR_FRAGMENT_INVALID )
     );
+
+    # These do not. Content is not touched.
+    $self->accept_target('latex');
 
     $self->{scratch} ||= '';
     $self->{stack}     = [];
@@ -60,6 +68,17 @@ sub encode_text
 {
     my ( $self, $text ) = @_;
 
+    my $resolve = 1;
+    eval {
+        no warnings 'uninitialized';
+        if (exists($self->{curr_open}[-1][-1]{'~resolve'}) &&
+            $self->{curr_open}[-1][-1]{'~resolve'} == 0)
+          {
+              $resolve = 0;
+          }
+    };
+    return $text unless $resolve;
+
     return $self->encode_verbatim_text($text) if $self->{flags}{in_verbatim};
     return $text if $self->{flags}{in_xref};
     return $text if $self->{flags}{in_figure};
@@ -83,7 +102,7 @@ sub encode_text
     $text =~ s/\.{3}\s*/\\ldots /g;
 
     # fix the ligatures
-    $text =~ s/f([fil])/f\\mbox{}$1/g;
+    $text =~ s/f([fil])/f\\mbox{}$1/g unless $self->{keep_ligatures};
 
     # fix emdashes
     $text =~ s/\s--\s/---/g;
@@ -195,6 +214,31 @@ sub end_E
 
 sub _treat_Es { }
 
+sub start_X
+{
+    my $self = shift;
+    push @{ $self->{stack} }, delete $self->{scratch};
+    $self->{scratch} = '';
+}
+
+sub end_X
+{
+    my $self       = shift;
+    my $terms_text = delete $self->{scratch};
+	my @terms;
+	for my $t (split ',', $terms_text) {
+		$t =~ s/^\s+|\s+$//g;
+		$t =~ s/"/""/g;
+		$t =~ s/([!|@])/"$1/g;
+		push @terms, $t;
+	}
+    {
+        no warnings 'uninitialized';
+        $self->{scratch}  = pop(@{ $self->{stack} })
+          . '\\index{' . join('!', @terms) . '}';
+    }
+}
+
 sub start_Z
 {
     my $self = shift;
@@ -211,8 +255,11 @@ sub end_Z
     # sanitize crossreference names
     $clean_xref =~ s/[^\w:]/-/g;
 
-    $self->{scratch}  = pop( @{ $self->{stack} } )
-                      . '\\label{' . $clean_xref . '}';
+    {
+        no warnings 'uninitialized';
+        $self->{scratch}  = pop( @{ $self->{stack} } )
+          . '\\label{' . $clean_xref . '}';
+    }
     $self->{flags}{in_xref}--;
 }
 
@@ -249,7 +296,7 @@ sub end_A
         $self->{scratch} .= '\\emph{\\titleref{' . $clean_xref . '}}';
     }
 
-    $self->{scratch} .= 'on page '
+    $self->{scratch} .= ' on page~'
                      .  '\\pageref{' . $clean_xref . '}';
 
     $self->{flags}{in_xref}--;
@@ -292,11 +339,32 @@ sub end_F
 sub start_for
 {
     my ( $self, $flags ) = @_;
+
+    if ($flags->{target} =~ /^latex$/i) { # support latex, LaTeX, et al
+        $self->{scratch} .= "\n\n";
+    } elsif (exists($flags->{'~really'}) &&
+             $flags->{'~really'} eq "=begin" &&
+             exists($self->{emit_environment}{$flags->{target}})) {
+        my $title = "";
+        $title = "{".$flags->{title}."}" if exists $flags->{title};
+        $self->{scratch} .= sprintf("\n\\begin{%s}%s\n",
+                                    $self->{emit_environment}{$flags->{target}},
+                                    $title);
+    }
 }
 
 sub end_for
 {
-    my $self = shift;
+    my ( $self, $flags ) = @_;
+
+    if ($flags->{target} =~ /^latex$/i) { # support latex, LaTeX, et al
+        $self->{scratch} .= "\n\n";
+        $self->emit;
+    } elsif (exists($self->{emit_environment}{$flags->{target}})) {
+        $self->{scratch} .= sprintf("\\end{%s}\n\n",
+                                    $self->{emit_environment}{$flags->{target}});
+        $self->emit;
+    }
 }
 
 sub start_Verbatim
@@ -305,9 +373,10 @@ sub start_Verbatim
 
     my $verb_options = "commandchars=\\\\\\{\\}";
     eval {
+        no warnings 'uninitialized';
         if ($self->{curr_open}[-1][-1]{target} eq 'screen') {
-            $verb_options .= ',frame=single,label='
-                             . $self->{labels}{screen};
+            my $label = $self->{curr_open}[-1][-1]{title} || $self->{labels}{screen};
+            $verb_options .= ",frame=single,label=$label";
         }
     };
 
@@ -320,6 +389,7 @@ sub start_Verbatim
 sub end_Verbatim
 {
     my $self = shift;
+
     $self->{scratch} .= "\n\\end{Verbatim}\n"
                      .  "\\vspace{-6pt}\n";
 
@@ -519,6 +589,7 @@ sub start_item_text
 sub start_sidebar
 {
     my ( $self, $flags ) = @_;
+
     my $title;
     $title = $self->encode_text( $flags->{title} ) if $flags->{title};
 
@@ -579,26 +650,27 @@ BEGIN
     }
 
     my %formats = (
-        B => [ 'textbf',   '' ],
-        C => [ 'texttt',   '' ],
-        I => [ 'emph',     '' ],
-        U => [ 'emph',     '' ],
-        R => [ 'emph',     '' ],
-        N => [ 'footnote', '' ],
-
-        X => [ 'index', '' ],
+        B => [ '\\textbf',   ''  ],
+        C => [ '\\texttt',   ''  ],
+        I => [ '\\emph',     ''  ],
+        U => [ '\\url',      ''  ],
+        R => [ '\\emph',     ''  ],
+        L => [ '\\url',      ''  ],
+        N => [ '\\footnote', ''  ],
+        G => [ '$^',         '$' ],
+        H => [ '$_',         '$' ],
     );
 
     while ( my ( $code, $fixes ) = each %formats )
     {
         my $start_sub = sub {
             my $self = shift;
-            $self->{scratch} .= '\\' . $fixes->[0] . '{';
+            $self->{scratch} .= $fixes->[0] . '{';
         };
 
         my $end_sub = sub {
             my $self = shift;
-            $self->{scratch} .= $fixes->[1] . '}';
+            $self->{scratch} .= '}' . $fixes->[1];
         };
 
         no strict 'refs';
@@ -614,10 +686,6 @@ __END__
 =head1 NAME
 
 Pod::PseudoPod::LaTeX - convert Pod::PseudoPod documents into LaTeX
-
-=head1 VERSION
-
-version 1.101650
 
 =head1 SYNOPSIS
 
@@ -641,7 +709,9 @@ Perhaps a little code snippet.
 The generated LaTeX code needs some packages to be loaded to work correctly.
 Currently it needs
 
-    \usepackage{fancyvrb}
+    \usepackage{fancyvrb}  % for Screen and Verbatim environments
+    \usepackage{url}       % for L<> URLs
+    \usepackage{titleref}  % for A<> generated code
 
 The standard font in LaTeX (Computer Modern) does not support bold and italic
 variants of its monospace font, an alternative is
@@ -650,6 +720,22 @@ variants of its monospace font, an alternative is
     \usepackage{textcomp}
     \usepackage[scaled]{beramono}
 
+=head1 MODULE OPTIONS
+
+Currently we support:
+
+=over
+
+=item C<keep_ligatures>
+
+LaTeX usually joins some pair of letters (ff, fi and fl), named
+ligatures. By default the module split thems. If you prefer to render
+them with ligatures, use:
+
+  my $parser = Pod::PseudoPod::LaTeX->new( keep_ligatures => 1 );
+
+=back
+
 =head1 STYLES / EMITTING ENVIRONMENTS
 
 The C<emit_environments> method accepts a hashref whose keys are POD environments
@@ -657,6 +743,25 @@ and values are latex environments. Use this method if you would like
 C<Pod::PseudoPod::LaTeX> to emit a simple C<\begin{foo}...\end{foo}> environment
 rather than emit specific formatting codes. You must define any environemtns you
 use in this way in your latex prelude.
+
+You can define your own environments easily. First you need to define
+the C<=begin...=end> environment with:
+
+  $parser->acept_target_as_text('my_environment');
+
+Then, you can use the C<emit_environments> method to tell
+C<Pod::PseudoPod::LaTeX> what LaTeX environment to emit:
+
+  $parser->emit_environments('my_environment' => 'latex_env');
+
+Also, if C<my_environment> is used in POD with a title, it is passed
+as the first argument to the LaTeX environment. That is,
+
+  =begin my_environment Some title
+
+Will generate
+
+  \begin{latex_env}{Some title}
 
 =head1 AUTHOR
 
@@ -705,14 +810,17 @@ See also L<perlpod>, L<Pod::Simple> and L<Pod::TeX>.  I did not reuse the
 latter because I need to support the additional POD directives found in
 PseudoPod.
 
+Thanks to multiple contributors, including (but not limited to) Dean Serenevy,
+Moritz Lenz, Alberto Simões, and Jerome Quelin.
+
 Thanks to Onyx Neon Press (L<http://www.onyxneon.com/>) for sponsoring this
 work under free software guidelines.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (c) 2006, 2009, 2010 chromatic, some rights reserved.
+Copyright (c) 2006, 2009 - 2011, chromatic.
 
 This program is free software; you can redistribute it and/or modify it under
-the same terms as Perl 5.8 itself.
+the same terms as Perl 5.14
 
 =cut
